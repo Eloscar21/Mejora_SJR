@@ -31,6 +31,22 @@ export class AuthApiService implements IAuthService {
 
     return response.json() as Promise<LoginResponse>;
   }
+
+  async register(payload: import("./IAuthService").RegisterPayload): Promise<void> {
+    const response = await fetch(`${API_BASE}/usuarios`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      const mensaje =
+        (errorBody as { message?: string }).message ??
+        `Error al registrar usuario: ${response.status}`;
+      throw new Error(mensaje);
+    }
+  }
 }
 
 /** Instancia Singleton lista para ser inyectada por defecto */

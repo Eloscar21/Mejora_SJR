@@ -24,6 +24,13 @@ export interface LoginResponse {
   rol?: string;
 }
 
+export interface RegisterPayload {
+  NombreCompleto: string;
+  Correo: string;
+  PasswordHash: string;
+  Telefono: string;
+}
+
 export interface IAuthService {
   /**
    * Envía las credenciales al endpoint POST /auth/login.
@@ -31,4 +38,10 @@ export interface IAuthService {
    *                 o si hay un error de red.
    */
   login(payload: LoginPayload): Promise<LoginResponse>;
+
+  /**
+   * Da de alta a un nuevo usuario/ciudadano en el sistema.
+   * Payload: PascalCase idéntico a las columnas SQL.
+   */
+  register(payload: RegisterPayload): Promise<void>;
 }
