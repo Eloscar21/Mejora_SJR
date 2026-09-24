@@ -4,6 +4,7 @@ const cors = require('cors');
 
 // Rutas
 const usuarioRoutes = require('./routes/usuario.routes');
+const reporteRoutes = require('./routes/reporte.routes');
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.use(express.json());
 
 // Inyectar Rutas
 app.use('/api', usuarioRoutes);
+app.use('/api', reporteRoutes);
 
 // Puerto y Arranque
 const PORT = process.env.PORT || 3000;
