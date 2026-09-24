@@ -3,8 +3,7 @@ const CAMPOS_REQUERIDOS = [
     'Descripcion',
     'UbicacionLatitud',
     'UbicacionLongitud',
-    'IdUsuario',
-    'IdCategoria'
+    'IdCategoria' // Se removió IdUsuario por seguridad
 ];
 
 class ReporteController {
@@ -16,6 +15,10 @@ class ReporteController {
         try {
             // El controlador SOLO valida la forma del payload y enruta (SRP)
             const payload = req.body;
+
+            // ✅ INYECCIÓN SEGURA DEL USUARIO (Mock temporal)
+            // Se debe leer desde req.user (el token desencriptado) en el futuro
+            payload.IdUsuario = req.user ? req.user.IdUsuario : 1;
 
             const camposFaltantes = CAMPOS_REQUERIDOS.filter(
                 (campo) => payload[campo] === undefined || payload[campo] === null || payload[campo] === ''
