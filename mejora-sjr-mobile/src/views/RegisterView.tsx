@@ -12,39 +12,38 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
-import { useLoginViewModel, LoginViewModelReturn } from '../viewModels/useLoginViewModel';
+import { useRegisterViewModel, RegisterViewModelReturn } from '../viewModels/useRegisterViewModel';
 import { AuthResponse } from '../models/Auth';
 
-export interface LoginViewProps {
-  /** Callback para navegar a la pantalla de Registro */
-  onNavigateToRegister?: () => void;
-  /** Callback ejecutado al autenticarse exitosamente */
-  onLoginSuccess?: (authData: AuthResponse | null) => void;
-  /** Inyección opcional del ViewModel para pruebas de UI aisladas */
-  viewModel?: LoginViewModelReturn;
+export interface RegisterViewProps {
+  /** Callback para navegar de regreso a la pantalla de Login */
+  onNavigateToLogin?: () => void;
+  /** Callback ejecutado cuando el registro es exitoso */
+  onRegisterSuccess?: (authData: AuthResponse | null) => void;
+  /** Inyección opcional del ViewModel para testing o previews */
+  viewModel?: RegisterViewModelReturn;
 }
 
 /**
- * LoginView — Vista tonta (Dumb View) para el inicio de sesión ciudadano.
+ * RegisterView — Vista tonta (Dumb View) para el registro de ciudadanos.
  * 
  * Reglas Arquitectónicas:
  * ✅ Cero llamadas de red o lógica de negocio.
  * ✅ Renderiza exclusivamente componentes nativos (View, Text, TextInput, etc.).
- * ✅ Todo el estado y la interacción se delegan al useLoginViewModel.
+ * ✅ Todo el estado y la interacción se delegan al useRegisterViewModel.
  */
-export const LoginView: React.FC<LoginViewProps> = ({
-  onNavigateToRegister,
-  onLoginSuccess,
+export const RegisterView: React.FC<RegisterViewProps> = ({
+  onNavigateToLogin,
+  onRegisterSuccess,
   viewModel,
 }) => {
-  const defaultVm = useLoginViewModel();
+  const defaultVm = useRegisterViewModel();
   const vm = viewModel ?? defaultVm;
 
-  // Manejar el submit y disparar callback si tiene éxito
-  const handlePressLogin = async () => {
+  const handlePressRegister = async () => {
     const success = await vm.handleSubmit();
-    if (success && onLoginSuccess) {
-      onLoginSuccess(vm.authData);
+    if (success && onRegisterSuccess) {
+      onRegisterSuccess(vm.authData);
     }
   };
 
@@ -65,9 +64,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <View style={styles.badgeContainer}>
               <Text style={styles.badgeText}>Mejora SJR Móvil</Text>
             </View>
-            <Text style={styles.title}>¡Bienvenido!</Text>
+            <Text style={styles.title}>Crear Cuenta</Text>
             <Text style={styles.subtitle}>
-              Ingresa con tu cuenta ciudadana para consultar y reportar incidencias en San Juan del Río.
+              Regístrate para reportar baches, luminarias y mejorar nuestra ciudad de San Juan del Río.
             </Text>
           </View>
 
@@ -82,6 +81,21 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 </TouchableOpacity>
               </View>
             ) : null}
+
+            {/* Campo: Nombre Completo */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Nombre Completo</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Juan Pérez García"
+                placeholderTextColor="#94A3B8"
+                autoCapitalize="words"
+                autoCorrect={false}
+                value={vm.nombreCompleto}
+                onChangeText={vm.setNombreCompleto}
+                editable={!vm.isLoading}
+              />
+            </View>
 
             {/* Campo: Correo Electrónico */}
             <View style={styles.fieldGroup}>
@@ -99,13 +113,28 @@ export const LoginView: React.FC<LoginViewProps> = ({
               />
             </View>
 
+            {/* Campo: Teléfono */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Teléfono (10 dígitos)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="4271234567"
+                placeholderTextColor="#94A3B8"
+                keyboardType="phone-pad"
+                maxLength={10}
+                value={vm.telefono}
+                onChangeText={vm.setTelefono}
+                editable={!vm.isLoading}
+              />
+            </View>
+
             {/* Campo: Contraseña */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Contraseña</Text>
               <View style={styles.passwordInputWrapper}>
                 <TextInput
                   style={styles.passwordInput}
-                  placeholder="Ingresa tu contraseña"
+                  placeholder="Mínimo 6 caracteres"
                   placeholderTextColor="#94A3B8"
                   secureTextEntry={!vm.showPassword}
                   autoCapitalize="none"
@@ -123,29 +152,44 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </View>
             </View>
 
-            {/* Botón Principal de Inicio de Sesión */}
+            {/* Campo: Confirmar Contraseña */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Confirmar Contraseña</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Repite tu contraseña"
+                placeholderTextColor="#94A3B8"
+                secureTextEntry={!vm.showPassword}
+                autoCapitalize="none"
+                value={vm.confirmPassword}
+                onChangeText={vm.setConfirmPassword}
+                editable={!vm.isLoading}
+              />
+            </View>
+
+            {/* Botón Principal de Registro */}
             <TouchableOpacity
               style={[styles.primaryButton, vm.isLoading && styles.buttonDisabled]}
-              onPress={handlePressLogin}
+              onPress={handlePressRegister}
               disabled={vm.isLoading}
               activeOpacity={0.8}
             >
               {vm.isLoading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.primaryButtonText}>Iniciar Sesión</Text>
+                <Text style={styles.primaryButtonText}>Registrarme</Text>
               )}
             </TouchableOpacity>
 
-            {/* Enlace para Navegar a Registro */}
+            {/* Enlace para volver a Iniciar Sesión */}
             <View style={styles.footerRow}>
-              <Text style={styles.footerPrompt}>¿Aún no tienes cuenta ciudadana?</Text>
+              <Text style={styles.footerPrompt}>¿Ya tienes una cuenta?</Text>
               <TouchableOpacity
-                onPress={onNavigateToRegister}
+                onPress={onNavigateToLogin}
                 disabled={vm.isLoading}
-                style={styles.registerLinkButton}
+                style={styles.loginLinkButton}
               >
-                <Text style={styles.registerLinkText}>Regístrate aquí</Text>
+                <Text style={styles.loginLinkText}>Inicia Sesión</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -166,25 +210,32 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingTop: 32,
+    paddingBottom: 48,
     justifyContent: 'center',
+    maxWidth: 500,
+    width: '100%',
+    alignSelf: 'center',
   },
   header: {
-    marginBottom: 28,
     alignItems: 'center',
+    marginBottom: 28,
   },
   badgeContainer: {
-    backgroundColor: '#E0E7FF',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
+    backgroundColor: '#EEF2FF',
+    borderColor: '#C7D2FE',
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
     marginBottom: 12,
   },
   badgeText: {
-    color: '#1E3A8A',
-    fontSize: 12,
+    color: '#4F46E5',
     fontWeight: '700',
-    letterSpacing: 0.5,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   title: {
     fontSize: 28,
@@ -198,52 +249,52 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 20,
-    maxWidth: 320,
+    paddingHorizontal: 12,
   },
   formCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 24,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#F1F5F9',
   },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FEF2F2',
+    borderColor: '#FCA5A5',
     borderWidth: 1,
-    borderColor: '#F87171',
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    marginBottom: 16,
+    marginBottom: 18,
   },
   errorText: {
-    flex: 1,
-    color: '#991B1B',
+    color: '#DC2626',
     fontSize: 13,
     fontWeight: '500',
+    flex: 1,
     marginRight: 8,
   },
   dismissButton: {
     padding: 4,
   },
   dismissButtonText: {
-    color: '#991B1B',
+    color: '#DC2626',
+    fontWeight: '700',
     fontSize: 14,
-    fontWeight: 'bold',
   },
   fieldGroup: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#334155',
     marginBottom: 6,
@@ -251,8 +302,8 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
@@ -263,8 +314,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
   },
   passwordInput: {
     flex: 1,
@@ -274,26 +325,26 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   eyeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   eyeText: {
-    color: '#2563EB',
-    fontSize: 13,
+    color: '#6366F1',
     fontWeight: '600',
+    fontSize: 13,
   },
   primaryButton: {
-    backgroundColor: '#1E3A8A',
-    borderRadius: 10,
+    backgroundColor: '#4F46E5',
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
-    shadowColor: '#1E3A8A',
+    shadowColor: '#4F46E5',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
   },
   buttonDisabled: {
     opacity: 0.65,
@@ -304,24 +355,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   footerRow: {
-    flexDirection: 'column',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 20,
+    flexWrap: 'wrap',
     gap: 4,
   },
   footerPrompt: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748B',
   },
-  registerLinkButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+  loginLinkButton: {
+    paddingVertical: 2,
   },
-  registerLinkText: {
-    fontSize: 14,
-    color: '#2563EB',
+  loginLinkText: {
+    fontSize: 13,
     fontWeight: '700',
+    color: '#4F46E5',
   },
 });
-
-export default LoginView;

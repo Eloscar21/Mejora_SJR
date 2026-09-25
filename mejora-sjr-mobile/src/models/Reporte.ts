@@ -1,40 +1,22 @@
-// Contrato de GET /api/reportes. Se conserva el nombre de las columnas del backend.
-export interface Reporte {
-  IdReporte: number;
+/** Contrato exacto de creación definido por HU-12. */
+export interface CrearReportePayload {
   Titulo: string;
   Descripcion: string;
   UbicacionLatitud: number;
   UbicacionLongitud: number;
-  DireccionFisica?: string | null;
-  EvidenciaUrl?: string | null;
-  IdUsuario: number;
+  DireccionFisica: string;
+  EvidenciaUrl: string;
   IdCategoria: number;
-  IdEstado: number;
-  FechaCreacion: string;
-  FechaActualizacion: string;
 }
 
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
+export interface CategoriaReporte {
+  IdCategoria: number;
+  Nombre: string;
 }
 
-function isOptionalText(value: unknown): boolean {
-  return value === undefined || value === null || typeof value === 'string';
-}
+/** TextInput conserva texto, incluso mientras se escribe un signo o decimal. */
+export type ReporteFormulario = {
+  [K in keyof CrearReportePayload]: K extends 'IdCategoria' ? number | null : string;
+};
 
-export function isReporte(value: unknown): value is Reporte {
-  if (typeof value !== 'object' || value === null) return false;
-  const reporte = value as Record<string, unknown>;
-  return isFiniteNumber(reporte.IdReporte) &&
-    typeof reporte.Titulo === 'string' &&
-    typeof reporte.Descripcion === 'string' &&
-    isFiniteNumber(reporte.UbicacionLatitud) &&
-    isFiniteNumber(reporte.UbicacionLongitud) &&
-    isOptionalText(reporte.DireccionFisica) &&
-    isOptionalText(reporte.EvidenciaUrl) &&
-    isFiniteNumber(reporte.IdUsuario) &&
-    isFiniteNumber(reporte.IdCategoria) &&
-    isFiniteNumber(reporte.IdEstado) &&
-    typeof reporte.FechaCreacion === 'string' &&
-    typeof reporte.FechaActualizacion === 'string';
-}
+export type ErroresReporte = Partial<Record<keyof CrearReportePayload, string>>;

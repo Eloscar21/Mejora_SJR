@@ -1,38 +1,61 @@
-/**
- * ReporteRepository.js
- * -----------------------------------------------------------------------
- * Capa de acceso a datos para la entidad "Reporte".
- *
- * Regla arquitectónica: TODA consulta SQL relacionada con Reportes vive
- * exclusivamente aquí. Ninguna otra capa (Service, Controller) debe
- * importar `mssql` ni construir queries directamente.
- *
- * Recibe `getPool` (la función exportada por config/db.js) por inyección
- * de dependencias en el constructor, en lugar de importar el módulo de
- * conexión directamente. Esto facilita las pruebas unitarias (se puede
- * inyectar un getPool falso/mock) y respeta el Principio de Inversión de
- * Dependencias (la "D" de SOLID).
- * -----------------------------------------------------------------------
- */
+const sql = require('mssql');
 
 class ReporteRepository {
-  /**
-   * @param {() => Promise<import('mssql').ConnectionPool>} getPool
-   *        Función que retorna (o crea) el pool de conexión a Azure SQL.
-   */
-  constructor(getPool) {
-    this.getPool = getPool;
-  }
+    constructor(dbPool) {
+        this.dbPool = dbPool;
+    }
 
-  /**
-   * Obtiene todos los reportes almacenados en la base de datos.
-   * @returns {Promise<Array<object>>}
-   */
-  async obtenerTodos() {
-    const pool = await this.getPool();
-    const result = await pool.request().query('SELECT * FROM Reportes');
-    return result.recordset;
-  }
+    /**
+     * Inserta un nuevo reporte. IdEstado siempre llega en 1 ('Recibido'),
+     * decisión que toma el Service, no este repositorio.
+     */
+    async createReporte(reporte) {
+        const result = await this.dbPool.request()
+            .input('Titulo', sql.VarChar, reporte.Titulo)
+            .input('Descripcion', sql.NVarChar, reporte.Descripcion)
+            .input('UbicacionLatitud', sql.Decimal(9, 6), reporte.UbicacionLatitud)
+            .input('UbicacionLongitud', sql.Decimal(9, 6), reporte.UbicacionLongitud)
+            .input('DireccionFisica', sql.VarChar, reporte.DireccionFisica || null)
+            .input('EvidenciaUrl', sql.VarChar, reporte.EvidenciaUrl || null)
+            .input('IdUsuario', sql.Int, reporte.IdUsuario)
+            .input('IdCategoria', sql.Int, reporte.IdCategoria)
+            .input('IdEstado', sql.Int, reporte.IdEstado)
+            .query(`
+                INSERT INTO Reportes (
+                    Titulo, Descripcion, UbicacionLatitud, UbicacionLongitud,
+                    DireccionFisica, EvidenciaUrl, IdUsuario, IdCategoria, IdEstado,
+                    FechaCreacion, FechaActualizacion
+                )
+                OUTPUT INSERTED.IdReporte, INSERTED.IdEstado, INSERTED.FechaCreacion, INSERTED.FechaActualizacion
+                VALUES (
+                    @Titulo, @Descripcion, @UbicacionLatitud, @UbicacionLongitud,
+                    @DireccionFisica, @EvidenciaUrl, @IdUsuario, @IdCategoria, @IdEstado,
+                    GETDATE(), GETDATE()
+                )
+            `);
+        return result.recordset[0];
+    }
+
+    /**
+     * Verifica que la llave foránea IdUsuario exista antes de insertar,
+     * para no depender solo del error de constraint de SQL Server.
+     */
+    async existeUsuario(idUsuario) {
+        const result = await this.dbPool.request()
+            .input('IdUsuario', sql.Int, idUsuario)
+            .query('SELECT IdUsuario FROM Usuarios WHERE IdUsuario = @IdUsuario');
+        return result.recordset.length > 0;
+    }
+
+    /**
+     * Verifica que la llave foránea IdCategoria exista antes de insertar.
+     */
+    async existeCategoria(idCategoria) {
+        const result = await this.dbPool.request()
+            .input('IdCategoria', sql.Int, idCategoria)
+            .query('SELECT IdCategoria FROM Categorias WHERE IdCategoria = @IdCategoria');
+        return result.recordset.length > 0;
+    }
 }
 
 module.exports = ReporteRepository;

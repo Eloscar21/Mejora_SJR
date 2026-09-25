@@ -1,7 +1,7 @@
 const { Router } = require('express');
-const ReporteRepository = require('../repositories/ReporteRepository');
-const ReporteService = require('../services/ReporteService');
-const ReporteController = require('../controllers/ReporteController');
+const UsuarioRepository = require('../repositories/UsuarioRepository');
+const UsuarioService = require('../services/UsuarioService');
+const UsuarioController = require('../controllers/UsuarioController');
 const { getPool } = require('../config/db');
 
 const router = Router();
@@ -9,22 +9,22 @@ const router = Router();
 // ==========================================
 // INYECCIÓN DE DEPENDENCIAS (Fábrica)
 // ==========================================
-let reporteControllerInstance = null;
+let usuarioControllerInstance = null;
 
 async function inyectarDependencias(req, res, next) {
-    if (!reporteControllerInstance) {
+    if (!usuarioControllerInstance) {
         try {
             // Obtener el Pool inyectable
             const dbPool = await getPool();
-
+            
             // Inyectar Pool al Repositorio
-            const reporteRepository = new ReporteRepository(dbPool);
-
+            const usuarioRepository = new UsuarioRepository(dbPool);
+            
             // Inyectar Repositorio al Servicio
-            const reporteService = new ReporteService(reporteRepository);
-
+            const usuarioService = new UsuarioService(usuarioRepository);
+            
             // Inyectar Servicio al Controlador
-            reporteControllerInstance = new ReporteController(reporteService);
+            usuarioControllerInstance = new UsuarioController(usuarioService);
         } catch (error) {
             return res.status(500).json({ success: false, message: 'Fallo al inicializar base de datos' });
         }
@@ -35,8 +35,9 @@ async function inyectarDependencias(req, res, next) {
 // ==========================================
 // RUTAS
 // ==========================================
-router.post('/reportes', inyectarDependencias, (req, res) => {
-    reporteControllerInstance.crearReporte(req, res);
+router.post('/usuarios', inyectarDependencias, (req, res) => {
+    // Delegamos al controlador ya inyectado
+    usuarioControllerInstance.registrarCiudadano(req, res);
 });
 
 module.exports = router;

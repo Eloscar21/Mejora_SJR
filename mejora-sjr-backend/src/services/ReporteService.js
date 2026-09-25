@@ -1,35 +1,49 @@
-/**
- * ReporteService.js
- * -----------------------------------------------------------------------
- * Capa de lógica de negocio para "Reporte".
- *
- * No conoce nada sobre SQL, mssql, ni el pool de conexión: solo conoce la
- * interfaz del repositorio que recibe por Inyección de Dependencias en su
- * constructor. Esto permite:
- *   - Cambiar de motor de base de datos sin tocar el Service.
- *   - Probar el Service con un repositorio "mock" en pruebas unitarias.
- * -----------------------------------------------------------------------
- */
-
 class ReporteService {
-  /**
-   * @param {import('../repositories/ReporteRepository')} reporteRepository
-   */
-  constructor(reporteRepository) {
-    this.reporteRepository = reporteRepository;
-  }
+    constructor(reporteRepository) {
+        this.reporteRepository = reporteRepository;
+    }
 
-  /**
-   * Retorna la lista completa de reportes.
-   * Aquí es donde, a futuro, se agregaría lógica de negocio adicional
-   * (filtrado, transformación, reglas de permisos, etc.) sin tocar el
-   * repositorio ni el controlador.
-   * @returns {Promise<Array<object>>}
-   */
-  async listarReportes() {
-    const reportes = await this.reporteRepository.obtenerTodos();
-    return reportes;
-  }
+    async crearReporte(datosReporte) {
+        const {
+            Titulo,
+            Descripcion,
+            UbicacionLatitud,
+            UbicacionLongitud,
+            DireccionFisica,
+            EvidenciaUrl,
+            IdUsuario,
+            IdCategoria
+        } = datosReporte;
+
+        // 1. Validar que las llaves foráneas realmente existan antes de insertar
+        const usuarioValido = await this.reporteRepository.existeUsuario(IdUsuario);
+        if (!usuarioValido) {
+            throw new Error('El IdUsuario proporcionado no existe (llave foránea inválida)');
+        }
+
+        const categoriaValida = await this.reporteRepository.existeCategoria(IdCategoria);
+        if (!categoriaValida) {
+            throw new Error('El IdCategoria proporcionado no existe (llave foránea inválida)');
+        }
+
+        // 2. Preparar entidad: IdEstado siempre 1 ('Recibido') al crear un reporte nuevo
+        const nuevoReporte = {
+            Titulo,
+            Descripcion,
+            UbicacionLatitud,
+            UbicacionLongitud,
+            DireccionFisica: DireccionFisica || null,
+            EvidenciaUrl: EvidenciaUrl || null,
+            IdUsuario,
+            IdCategoria,
+            IdEstado: 1
+        };
+
+        // 3. Ejecutar creación
+        const resultado = await this.reporteRepository.createReporte(nuevoReporte);
+
+        return { ...nuevoReporte, ...resultado };
+    }
 }
 
 module.exports = ReporteService;

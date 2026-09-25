@@ -1,54 +1,50 @@
+import { Platform } from 'react-native';
 import { ITokenStorage } from '../contracts/ITokenStorage';
 
+const TOKEN_KEY = 'sjr_auth_token';
+
 /**
- * Implementación de almacenamiento de tokens para el cliente móvil.
+ * Implementación de almacenamiento de token adaptable a la plataforma.
+ * - En Web: utiliza localStorage de forma segura con fallback a memoria.
+ * - En Android / iOS: almacena en memoria con fallback seguro.
  * 
- * Diseñado con fallback seguro: mantiene el token en memoria para desarrollo
- * y entornos de prueba, preparado para delegar en AsyncStorage o SecureStore
- * según la configuración de seguridad del dispositivo.
+ * Cumple con ITokenStorage para permitir Dependency Inversion (SOLID).
  */
 export class TokenStorage implements ITokenStorage {
-  private static memoryToken: string | null = null;
-  private readonly storageKey: string;
-
-  constructor(storageKey: string = '@mejora_sjr_jwt') {
-    this.storageKey = storageKey;
-  }
+  private inMemoryToken: string | null = null;
 
   async getToken(): Promise<string | null> {
     try {
-      // Si se encuentra en entorno web o hay localStorage disponible
-      if (typeof window !== 'undefined' && window.localStorage) {
-        return window.localStorage.getItem(this.storageKey);
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(TOKEN_KEY) ?? this.inMemoryToken;
       }
+      return this.inMemoryToken;
     } catch {
-      // Ignorar excepciones de acceso a almacenamiento
+      return this.inMemoryToken;
     }
-
-    return TokenStorage.memoryToken;
   }
 
   async setToken(token: string): Promise<void> {
-    TokenStorage.memoryToken = token;
-
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(this.storageKey, token);
+      this.inMemoryToken = token;
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(TOKEN_KEY, token);
       }
     } catch {
-      // Fallback seguro en memoria ya asignado
+      this.inMemoryToken = token;
     }
   }
 
   async removeToken(): Promise<void> {
-    TokenStorage.memoryToken = null;
-
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.removeItem(this.storageKey);
+      this.inMemoryToken = null;
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(TOKEN_KEY);
       }
     } catch {
-      // Ignorar excepciones al remover
+      this.inMemoryToken = null;
     }
   }
 }
+
+export const defaultTokenStorage = new TokenStorage();
