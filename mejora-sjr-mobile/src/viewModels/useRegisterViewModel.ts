@@ -4,12 +4,15 @@ import { authApiService } from '../services/api/AuthApiService';
 import { AuthResponse } from '../models/Auth';
 
 /**
- * Estado y manejadores expuestos por useLoginViewModel para la Vista tonta.
+ * Estado y manejadores expuestos por useRegisterViewModel para la Vista tonta de Registro.
  */
-export interface LoginViewModelReturn {
-  // Estados de los campos de texto
+export interface RegisterViewModelReturn {
+  // Campos del formulario
+  nombreCompleto: string;
   correo: string;
+  telefono: string;
   password: string;
+  confirmPassword: string;
   showPassword: boolean;
 
   // Estados de retroalimentación
@@ -19,8 +22,11 @@ export interface LoginViewModelReturn {
   authData: AuthResponse | null;
 
   // Setters y Handlers
+  setNombreCompleto: (value: string) => void;
   setCorreo: (value: string) => void;
+  setTelefono: (value: string) => void;
   setPassword: (value: string) => void;
+  setConfirmPassword: (value: string) => void;
   toggleShowPassword: () => void;
   handleSubmit: () => Promise<boolean>;
   clearError: () => void;
@@ -28,22 +34,25 @@ export interface LoginViewModelReturn {
 }
 
 /**
- * useLoginViewModel — Hook ViewModel para la pantalla de Login móvil.
+ * useRegisterViewModel — Hook ViewModel para la pantalla de Registro móvil.
  * 
  * Cumplimiento Arquitectónico:
- * - MVVM: Contiene toda la lógica de negocio y estado del formulario.
- * - SOLID & DI: Recibe el servicio IAuthService inyectado por parámetro.
- *   Por defecto inyecta authApiService; sustituible por mocks en tests.
- * - Sin dependencias directas de Axios o Fetch.
- * - Envía el payload con claves estrictamente en PascalCase: { Correo, PasswordHash }.
+ * - MVVM: Orquesta validaciones, estado de campos y llamada a IAuthService.
+ * - SOLID & DI: Recibe IAuthService inyectado por parámetro (DIP).
+ * - Desacoplado de Axios/Fetch.
+ * - Envía el payload con claves estrictamente en PascalCase:
+ *   { NombreCompleto, Correo, PasswordHash, Telefono }
  * 
- * @param service Instancia de IAuthService inyectada (DIP).
+ * @param service Instancia de IAuthService inyectada.
  */
-export function useLoginViewModel(
+export function useRegisterViewModel(
   service: IAuthService = authApiService
-): LoginViewModelReturn {
+): RegisterViewModelReturn {
+  const [nombreCompleto, setNombreCompletoState] = useState<string>('');
   const [correo, setCorreoState] = useState<string>('');
+  const [telefono, setTelefonoState] = useState<string>('');
   const [password, setPasswordState] = useState<string>('');
+  const [confirmPassword, setConfirmPasswordState] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -51,13 +60,30 @@ export function useLoginViewModel(
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [authData, setAuthData] = useState<AuthResponse | null>(null);
 
+  const setNombreCompleto = useCallback((value: string) => {
+    setNombreCompletoState(value);
+    setErrorMessage(null);
+  }, []);
+
   const setCorreo = useCallback((value: string) => {
     setCorreoState(value);
     setErrorMessage(null);
   }, []);
 
+  const setTelefono = useCallback((value: string) => {
+    // Permitir solo números y longitud máxima de 10
+    const cleaned = value.replace(/\D/g, '').slice(0, 10);
+    setTelefonoState(cleaned);
+    setErrorMessage(null);
+  }, []);
+
   const setPassword = useCallback((value: string) => {
     setPasswordState(value);
+    setErrorMessage(null);
+  }, []);
+
+  const setConfirmPassword = useCallback((value: string) => {
+    setConfirmPasswordState(value);
     setErrorMessage(null);
   }, []);
 
@@ -70,8 +96,11 @@ export function useLoginViewModel(
   }, []);
 
   const resetForm = useCallback(() => {
+    setNombreCompletoState('');
     setCorreoState('');
+    setTelefonoState('');
     setPasswordState('');
+    setConfirmPasswordState('');
     setShowPassword(false);
     setIsLoading(false);
     setErrorMessage(null);
@@ -80,20 +109,36 @@ export function useLoginViewModel(
   }, []);
 
   const validate = (): boolean => {
+    const trimmedNombre = nombreCompleto.trim();
+    if (!trimmedNombre || trimmedNombre.length < 3) {
+      setErrorMessage('Ingresa tu nombre completo (mínimo 3 caracteres).');
+      return false;
+    }
+
     const trimmedCorreo = correo.trim();
     if (!trimmedCorreo) {
-      setErrorMessage('Por favor, ingresa tu correo electrónico.');
+      setErrorMessage('Ingresa tu correo electrónico.');
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmedCorreo)) {
-      setErrorMessage('Ingresa un formato de correo electrónico válido.');
+      setErrorMessage('Ingresa un correo electrónico con formato válido.');
       return false;
     }
 
-    if (!password) {
-      setErrorMessage('Por favor, ingresa tu contraseña.');
+    if (!telefono || telefono.length < 10) {
+      setErrorMessage('Ingresa un número telefónico válido a 10 dígitos.');
+      return false;
+    }
+
+    if (!password || password.length < 6) {
+      setErrorMessage('La contraseña debe tener al menos 6 caracteres.');
+      return false;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMessage('Las contraseñas no coinciden. Verifica nuevamente.');
       return false;
     }
 
@@ -109,13 +154,15 @@ export function useLoginViewModel(
     setErrorMessage(null);
 
     try {
-      // Payload en PascalCase según especificación del backend
+      // Payload en PascalCase estricto según la especificación
       const payload = {
+        NombreCompleto: nombreCompleto.trim(),
         Correo: correo.trim(),
         PasswordHash: password,
+        Telefono: telefono.trim(),
       };
 
-      const response = await service.login(payload);
+      const response = await service.register(payload);
       setAuthData(response);
       setIsSuccess(true);
       return true;
@@ -123,25 +170,31 @@ export function useLoginViewModel(
       const message =
         error instanceof Error
           ? error.message
-          : 'Ocurrió un error inesperado al iniciar sesión. Intenta nuevamente.';
+          : 'Ocurrió un error al registrar la cuenta. Intenta nuevamente.';
       setErrorMessage(message);
       setIsSuccess(false);
       return false;
     } finally {
       setIsLoading(false);
     }
-  }, [correo, password, service]);
+  }, [nombreCompleto, correo, password, confirmPassword, telefono, service]);
 
   return {
+    nombreCompleto,
     correo,
+    telefono,
     password,
+    confirmPassword,
     showPassword,
     isLoading,
     errorMessage,
     isSuccess,
     authData,
+    setNombreCompleto,
     setCorreo,
+    setTelefono,
     setPassword,
+    setConfirmPassword,
     toggleShowPassword,
     handleSubmit,
     clearError,

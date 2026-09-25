@@ -1,43 +1,65 @@
-/**
- * ReporteController.js
- * -----------------------------------------------------------------------
- * Capa HTTP para "Reporte". Traduce peticiones/respuestas de Express hacia
- * y desde el Service correspondiente. No contiene lógica de negocio ni
- * accede a la base de datos directamente.
- * -----------------------------------------------------------------------
- */
+const CAMPOS_REQUERIDOS = [
+    'Titulo',
+    'Descripcion',
+    'UbicacionLatitud',
+    'UbicacionLongitud',
+    'IdCategoria' // Se removió IdUsuario por seguridad
+];
 
 class ReporteController {
-  /**
-   * @param {import('../services/ReporteService')} reporteService
-   */
-  constructor(reporteService) {
-    this.reporteService = reporteService;
-
-    // Bind explícito para preservar el `this` cuando Express invoca
-    // el método como callback de una ruta.
-    this.listar = this.listar.bind(this);
-  }
-
-  /**
-   * GET /api/reportes
-   * Devuelve la lista completa de reportes.
-   */
-  async listar(req, res) {
-    try {
-      const reportes = await this.reporteService.listarReportes();
-      return res.status(200).json({
-        success: true,
-        data: reportes,
-      });
-    } catch (error) {
-      console.error('[ReporteController] Error al listar reportes:', error.message);
-      return res.status(500).json({
-        success: false,
-        message: 'Ocurrió un error al obtener los reportes.',
-      });
+    constructor(reporteService) {
+        this.reporteService = reporteService;
     }
-  }
+
+    async crearReporte(req, res) {
+        try {
+            // El controlador SOLO valida la forma del payload y enruta (SRP)
+            const payload = req.body;
+
+            // ✅ INYECCIÓN SEGURA DEL USUARIO (Mock temporal)
+            // Se debe leer desde req.user (el token desencriptado) en el futuro
+            payload.IdUsuario = req.user ? req.user.IdUsuario : 1;
+
+            const camposFaltantes = CAMPOS_REQUERIDOS.filter(
+                (campo) => payload[campo] === undefined || payload[campo] === null || payload[campo] === ''
+            );
+
+            if (camposFaltantes.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Faltan campos requeridos: ${camposFaltantes.join(', ')}`
+                });
+            }
+
+            if (typeof payload.UbicacionLatitud !== 'number' || typeof payload.UbicacionLongitud !== 'number') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'UbicacionLatitud y UbicacionLongitud deben ser valores numéricos'
+                });
+            }
+
+            if (!Number.isInteger(payload.IdUsuario) || !Number.isInteger(payload.IdCategoria)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'IdUsuario e IdCategoria deben ser números enteros'
+                });
+            }
+
+            const resultado = await this.reporteService.crearReporte(payload);
+
+            return res.status(201).json({
+                success: true,
+                message: 'Reporte creado con éxito',
+                data: resultado
+            });
+        } catch (error) {
+            const isClientError = error.message.includes('no existe') || error.message.includes('requeridos');
+            return res.status(isClientError ? 400 : 500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
 }
 
 module.exports = ReporteController;

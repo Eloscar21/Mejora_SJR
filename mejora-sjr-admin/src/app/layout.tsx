@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -14,12 +15,14 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Mejora SJR — Panel Administrativo",
-  description:
-    "Panel de gestión y seguimiento de reportes ciudadanos urbanos del Municipio de San Juan del Río, Querétaro. Exclusivo para personal del Ayuntamiento.",
-  keywords: ["reportes ciudadanos", "San Juan del Río", "Querétaro", "panel administrativo", "municipio"],
+  description: "Panel de gestión y seguimiento de reportes ciudadanos urbanos del Municipio de San Juan del Río, Querétaro.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: ReactNode;
+}>) {
   return (
     <html
       lang="es-MX"
